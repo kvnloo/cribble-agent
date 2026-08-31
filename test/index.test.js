@@ -438,6 +438,72 @@ test("renderSnapshot produces a compact human-readable report", () => {
   assert.doesNotMatch(rendered, /modelBreakdowns/);
 });
 
+test("sync --all fixture data exposes per-provider token breakdown without upload", () => {
+  const { days } = parseArgs(["sync", "--all"]);
+  assert.equal(days, 365);
+  const snapshot = buildSnapshot(
+    {
+      daily: [
+        {
+          date: "2026-08-01",
+          agent: "claude",
+          inputTokens: 100,
+          outputTokens: 20,
+          totalCost: 0.4,
+        },
+        {
+          date: "2026-08-02",
+          provider: "codex",
+          inputTokens: 50,
+          outputTokens: 10,
+          totalCost: 0.1,
+        },
+        {
+          date: "2025-01-01",
+          agent: "claude",
+          inputTokens: 1,
+          outputTokens: 1,
+          totalCost: 0.01,
+        },
+      ],
+      events: [
+        {
+          eventId: "e1",
+          requestId: "e1",
+          occurredAt: "2026-08-22T12:00:00.000Z",
+          agent: "hermes",
+          provider: "ollama",
+          runtime: "ollama",
+          model: "qwen2.5:3b",
+          inputTokens: 11,
+          outputTokens: 7,
+        },
+      ],
+    },
+    { days, now: NOW },
+  );
+  assert.deepEqual(
+    snapshot.providers.map((row) => [row.name, row.totalTokens]),
+    [
+      ["claude", 122],
+      ["codex", 60],
+      ["ollama", 18],
+    ],
+  );
+  const rendered = renderSnapshot(snapshot, { color: false });
+  assert.match(rendered, /Providers/);
+  assert.match(rendered, /claude\s+122/);
+  assert.match(rendered, /codex\s+60/);
+  assert.match(rendered, /ollama\s+18/);
+  const payload = buildWirePayload(snapshot, {
+    clientId: "123e4567-e89b-42d3-a456-426614174000",
+    timezone: "UTC",
+    cliVersion: "1.4.0-beta.4",
+    days,
+  });
+  assert.equal(Object.hasOwn(payload, "providers"), false);
+});
+
 test("usage report has stable plain and styled snapshots", () => {
   const snapshot = buildSnapshot(
     {
