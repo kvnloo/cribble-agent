@@ -44,22 +44,22 @@ test("sync receipt has stable plain and styled forms", () => {
   assert.equal(stripVTControlCharacters(styled), plain);
 });
 
-test("sync receipt lists per-provider token totals from local payload metadata", () => {
+test("sync receipt lists per-provider token and cost totals from local payload metadata", () => {
   const plain = renderSyncReceipt(
     {
       ...RECEIPT,
       payload: {
         ...RECEIPT.payload,
         providers: [
-          { name: "claude", totalTokens: 3000 },
-          { name: "ollama", totalTokens: 18 },
+          { name: "claude", totalTokens: 3000, costUsd: 3.5 },
+          { name: "ollama", totalTokens: 18, costUsd: 0 },
         ],
       },
     },
     { color: false },
   );
-  assert.match(plain, /claude 3,000/);
-  assert.match(plain, /ollama 18/);
+  assert.match(plain, /claude 3,000 tokens · \$3\.50 estimated/);
+  assert.match(plain, /ollama 18 tokens · \$0\.00 estimated/);
   assert.match(plain, /4,000 tokens/);
 });
 

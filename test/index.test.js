@@ -438,7 +438,7 @@ test("renderSnapshot produces a compact human-readable report", () => {
   assert.doesNotMatch(rendered, /modelBreakdowns/);
 });
 
-test("sync --all fixture data exposes per-provider token breakdown without upload", () => {
+test("sync --all attributes ccusage agent costs to real providers without upload", () => {
   const { days } = parseArgs(["sync", "--all"]);
   assert.equal(days, 365);
   const snapshot = buildSnapshot(
@@ -446,17 +446,39 @@ test("sync --all fixture data exposes per-provider token breakdown without uploa
       daily: [
         {
           date: "2026-08-01",
-          agent: "claude",
-          inputTokens: 100,
-          outputTokens: 20,
-          totalCost: 0.4,
-        },
-        {
-          date: "2026-08-02",
-          provider: "codex",
-          inputTokens: 50,
-          outputTokens: 10,
-          totalCost: 0.1,
+          agent: "all",
+          agents: [
+            {
+              agent: "claude",
+              inputTokens: 100,
+              outputTokens: 20,
+              totalCost: 0.4,
+            },
+            {
+              agent: "codex",
+              inputTokens: 50,
+              outputTokens: 10,
+              totalCost: 0.1,
+            },
+            {
+              agent: "hermes",
+              inputTokens: 40,
+              outputTokens: 10,
+              totalCost: 0.2,
+              modelBreakdowns: [
+                {
+                  modelName: "shared/free-model",
+                  inputTokens: 40,
+                  outputTokens: 10,
+                  cost: 0.2,
+                },
+              ],
+            },
+          ],
+          metadata: { agents: ["claude", "codex", "hermes"] },
+          inputTokens: 190,
+          outputTokens: 40,
+          totalCost: 0.7,
         },
         {
           date: "2025-01-01",
@@ -479,22 +501,30 @@ test("sync --all fixture data exposes per-provider token breakdown without uploa
           outputTokens: 7,
         },
       ],
+      providerRoutes: [
+        { model: "shared/free-model", provider: "nous", totalTokens: 3 },
+        { model: "shared/free-model", provider: "openrouter", totalTokens: 1 },
+      ],
     },
     { days, now: NOW },
   );
   assert.deepEqual(
-    snapshot.providers.map((row) => [row.name, row.totalTokens]),
+    snapshot.providers.map((row) => [row.name, row.totalTokens, row.costUsd]),
     [
-      ["claude", 122],
-      ["codex", 60],
-      ["ollama", 18],
+      ["claude", 122, 0.41],
+      ["nous", 37, 0.15],
+      ["codex", 60, 0.1],
+      ["openrouter", 13, 0.05],
+      ["ollama", 18, 0],
     ],
   );
   const rendered = renderSnapshot(snapshot, { color: false });
   assert.match(rendered, /Providers/);
-  assert.match(rendered, /claude\s+122/);
-  assert.match(rendered, /codex\s+60/);
-  assert.match(rendered, /ollama\s+18/);
+  assert.match(rendered, /claude\s+122 tokens · \$0\.41 estimated/);
+  assert.match(rendered, /nous\s+37 tokens · \$0\.15 estimated/);
+  assert.match(rendered, /codex\s+60 tokens · \$0\.10 estimated/);
+  assert.match(rendered, /openrouter\s+13 tokens · \$0\.05 estimated/);
+  assert.doesNotMatch(rendered, /\bhermes\s+\d/);
   const payload = buildWirePayload(snapshot, {
     clientId: "123e4567-e89b-42d3-a456-426614174000",
     timezone: "UTC",

@@ -14,6 +14,7 @@ const {
 
 const isolatedUsage = {
   loadSupplementalUsageFn: () => ({ daily: [] }),
+  loadHermesProviderRoutesFn: () => [],
 };
 
 test("Claude profile directories are validated and deduplicated by real path", () => {
@@ -43,6 +44,7 @@ test("extra Claude profiles merge only Claude rows and fail closed", () => {
   assert.equal(result.daily.reduce((sum, row) => sum + row.inputTokens, 0), 30);
   assert.equal(result.daily.some((row) => row.inputTokens === 999), false);
   assert.equal(invocations.length, 2);
+  assert.ok(invocations[0].args.includes("--by-agent"));
   assert.ok(invocations[1].args.includes("--by-agent"));
   assert.throws(() => loadUsage(env, { ...options, execFileSyncFn: (_c, _a, o) => { if (o.env.CLAUDE_CONFIG_DIR) throw new Error("profile failed"); return '{"daily":[]}'; } }), /profile failed/);
 });
@@ -114,6 +116,7 @@ test("loadUsage invokes the configured collector without a shell", () => {
   assert.deepEqual(invocation.args, [
     "daily",
     "--json",
+    "--by-agent",
     "--timezone",
     "UTC",
   ]);
@@ -162,6 +165,7 @@ test("loadUsage constrains ccusage to the requested timezone date window", () =>
   assert.deepEqual(invocation.args, [
     "daily",
     "--json",
+    "--by-agent",
     "--since",
     "2026-08-20",
     "--timezone",
@@ -258,6 +262,7 @@ test("loadUsage invokes the bundled collector through an absolute Node path", ()
     binaryPath,
     "daily",
     "--json",
+    "--by-agent",
     "--timezone",
     "UTC",
   ]);
@@ -291,6 +296,7 @@ test("loadUsage never passes a Windows npm shell shim to node.exe", () => {
     binaryPath,
     "daily",
     "--json",
+    "--by-agent",
     "--timezone",
     "UTC",
   ]);
