@@ -27,7 +27,7 @@ test("ledger detects source mutation while pinned and fails closed", () => {
   const root = mkdtempSync(join(tmpdir(), "cribble-ollama-")); const file = join(root, "usage.jsonl");
   try {
     writeFileSync(file, `${JSON.stringify(event())}\n`, { mode: 0o600 });
-    assert.throws(() => readOllamaLedger(file, { afterRead: () => writeFileSync(file, `${JSON.stringify(event({ outputTokens: 8 }))}\n`) }), /changed while being read/);
+    assert.throws(() => readOllamaLedger(file, { afterRead: () => writeFileSync(file, `${JSON.stringify(event({ outputTokens: 8 }))}\nmutated\n`) }), /changed while being read/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
